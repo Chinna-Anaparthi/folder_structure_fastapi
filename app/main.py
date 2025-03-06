@@ -1,39 +1,23 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI
 
-app = FastAPI()
+from .dependencies import get_query_token, get_token_header
+from .internal import admin
+from .routers import items, users
 
-class BookCreateModel(BaseModel):
-    title:str   
-    author:str
+app = FastAPI(dependencies=[Depends(get_query_token)])
 
-book = [
-    {
-        "id":1,
-        "title":"think python",
-        "author":"chinna"
-    },
-    {
-        "id":2,
-        "title":"think cython",
-        "author":"chinna"
-    }
-]
-@app.post("/items/", status_code=201)
-async def create_item(name: str):
-    return {"name": name}
 
-@app.post("/app/{item}",status_code=201)
-async def read_item(item:str):
-    return {"message":f"hello {name}"}
+app.include_router(users.router)
+app.include_router(items.router)
+app.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(get_token_header)],
+    responses={418: {"description": "I'm a teapot"}},
+)
 
-@app.post("/api/create_book",status_code=201)
-async def create_book(book_data:BookCreateModel):
-    return {
-        "title":book_data.title,
-        "author":book_data.author
-    }
 
-@app.get("/app/books",status_code=201)
-async def get_all_books():
-    return book
+@app.get("/")
+async def root():
+    return {"message": "Hello Bigger Applications!"}
